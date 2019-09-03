@@ -10,6 +10,11 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.EntityFrameworkCore;
+using WebAPIDemo.Models;
+using WebAPIDemo.Data;
+using WebAPIDemo.Services;
+using Swashbuckle.AspNetCore.Swagger;
 
 namespace WebAPIDemo
 {
@@ -26,10 +31,17 @@ namespace WebAPIDemo
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
+            services.AddDbContext<ProductDbContext>(x => x.UseSqlServer(@"Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=ProductsDB;"));
+            services.AddScoped<IProduct, ProductRepository>();
+
+            services.AddSwaggerGen(c =>
+            {
+                c.SwaggerDoc("v1", new Info { Title = "Products Api", Version = "v1" });
+            });
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IHostingEnvironment env)
+        public void Configure(IApplicationBuilder app, IHostingEnvironment env, ProductDbContext productDbContext)
         {
             if (env.IsDevelopment())
             {
@@ -39,9 +51,15 @@ namespace WebAPIDemo
             {
                 app.UseHsts();
             }
+            app.UseSwagger();
+            app.UseSwaggerUI(c =>
+            {
+                c.SwaggerEndpoint("/swagger/v1/swagger.json", "Api for Products");
+            });
 
             app.UseHttpsRedirection();
             app.UseMvc();
+            productDbContext.Database.EnsureCreated();
         }
     }
 }
